@@ -3,12 +3,15 @@ package org.openvod.admin.config.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.openvod.admin.entity.AdminUser;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import javax.servlet.http.HttpServletRequest;
@@ -19,8 +22,17 @@ import java.util.Optional;
 
 @Slf4j
 public class MyAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
-//  @Autowired
-//  private SessionRegistry sessionRegistry;
+  @Autowired
+  private SessionRegistry sessionRegistry;
+
+  /**
+   * 如何验证用户的登陆
+   *
+   * @param request
+   * @param response
+   * @return
+   * @throws AuthenticationException
+   */
   @Override
   public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
     if (!request.getMethod().equals("POST")) {
@@ -37,7 +49,7 @@ public class MyAuthenticationFilter extends UsernamePasswordAuthenticationFilter
       String password = Optional.ofNullable(loginData.get("password")).orElseThrow(() -> new BadCredentialsException("缺少密码"));
       UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(username, password);
       setDetails(request, authRequest);
-//      sessionRegistry.registerNewSession(request.getSession(true).getId(), new SysUser());
+      sessionRegistry.registerNewSession(request.getSession(true).getId(), new AdminUser());
       return this.getAuthenticationManager().authenticate(authRequest);
     } catch (IOException e) {
       log.error(e.getMessage());

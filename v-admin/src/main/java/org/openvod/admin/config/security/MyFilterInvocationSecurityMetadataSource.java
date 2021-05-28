@@ -30,7 +30,8 @@ public class MyFilterInvocationSecurityMetadataSource implements FilterInvocatio
   @Override
   public Collection<ConfigAttribute> getAttributes(Object o) throws IllegalArgumentException {
     String requestUrl = ((FilterInvocation) o).getRequestUrl();
-    return SecurityConfig.createList(FAKE_LOGIN_ROLE);
+    System.out.println(requestUrl);
+    return SecurityConfig.createList("administrator");
   }
 
   @Override

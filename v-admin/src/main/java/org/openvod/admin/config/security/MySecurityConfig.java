@@ -15,9 +15,14 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.session.ConcurrentSessionControlAuthenticationStrategy;
+import org.springframework.security.web.session.ConcurrentSessionFilter;
+
+import javax.servlet.http.HttpServletResponse;
 
 @Slf4j
 @Configuration
@@ -70,20 +75,20 @@ public class MySecurityConfig extends WebSecurityConfigurerAdapter {
     loginFilter.setAuthenticationFailureHandler((request, response, exception) -> {
       response.setContentType(MediaType.APPLICATION_JSON_VALUE);
       response.setCharacterEncoding(ENCODING);
-      objectMapper.writeValue(response.getOutputStream(), ImmutableMap.of("message", "登陆失败"));
+      objectMapper.writeValue(response.getOutputStream(), ImmutableMap.of("message", exception.getMessage()));
     });
     loginFilter.setAuthenticationManager(authenticationManagerBean());
     loginFilter.setFilterProcessesUrl(LOGIN_URL);
-//    ConcurrentSessionControlAuthenticationStrategy sessionStrategy = new ConcurrentSessionControlAuthenticationStrategy(sessionRegistry());
-//    sessionStrategy.setMaximumSessions(1);
-//    loginFilter.setSessionAuthenticationStrategy(sessionStrategy);
+    ConcurrentSessionControlAuthenticationStrategy sessionStrategy = new ConcurrentSessionControlAuthenticationStrategy(sessionRegistry());
+    sessionStrategy.setMaximumSessions(1);
+    loginFilter.setSessionAuthenticationStrategy(sessionStrategy);
     return loginFilter;
   }
 
-//  @Bean
-//  SessionRegistryImpl sessionRegistry() {
-//    return new SessionRegistryImpl();
-//  }
+  @Bean
+  SessionRegistryImpl sessionRegistry() {
+    return new SessionRegistryImpl();
+  }
 
   @Override
   protected void configure(HttpSecurity http) throws Exception {
@@ -113,12 +118,12 @@ public class MySecurityConfig extends WebSecurityConfigurerAdapter {
         resp.setCharacterEncoding(ENCODING);
         objectMapper.writeValue(resp.getWriter(), ImmutableMap.of("message", "访问失败"));
       });
-//    http.addFilterAt(new ConcurrentSessionFilter(sessionRegistry(), event -> {
-//      HttpServletResponse resp = event.getResponse();
-//      resp.setContentType(MediaType.APPLICATION_JSON_VALUE);
-//      resp.setCharacterEncoding(ENCODING.UTF8);
-//      objectMapper.writeValue(resp.getWriter(), ResponseResult.of().withErrorMessage("用户已在另一出登录").withCode(HttpStatus.UNAUTHORIZED.value()));
-//    }), ConcurrentSessionFilter.class);
+    http.addFilterAt(new ConcurrentSessionFilter(sessionRegistry(), event -> {
+      HttpServletResponse resp = event.getResponse();
+      resp.setContentType(MediaType.APPLICATION_JSON_VALUE);
+      resp.setCharacterEncoding(ENCODING);
+      objectMapper.writeValue(resp.getWriter(), ImmutableMap.of("message", "用户已在另一出登录"));
+    }), ConcurrentSessionFilter.class);
     http.addFilterAt(myAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
   }
 }
